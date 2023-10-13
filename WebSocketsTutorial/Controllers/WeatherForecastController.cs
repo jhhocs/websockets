@@ -28,23 +28,11 @@ namespace WebSocketsTutorial.Controllers
             db = redis.GetDatabase();
         }
 
-        [HttpGet("/wsGet")]
+        [Route("/wsGet")]
         public async Task Get()
         {
             if (HttpContext.WebSockets.IsWebSocketRequest)
             {
-                using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
-                _logger.Log(LogLevel.Information, "WebSocket connection established");
-                await Echo(webSocket);
-            }
-            else {
-                HttpContext.Response.StatusCode = BadRequest;
-            }
-        }
-
-        [HttpPost("/wsPost")]
-        public async Task Post() {
-            if (HttpContext.WebSockets.IsWebSocketRequest) {
                 using var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync();
                 _logger.Log(LogLevel.Information, "WebSocket connection established");
                 await Echo(webSocket);
@@ -62,12 +50,17 @@ namespace WebSocketsTutorial.Controllers
 
             while (!result.CloseStatus.HasValue)
             {
-                string value = await db.StringGetAsync("foo");
-                Console.WriteLine(value);
+                //string value = await db.StringGetAsync("foo");
+                //Console.WriteLine(value);
 
                 var serverMsg = Encoding.UTF8.GetBytes($"Server: Hello. You said: {Encoding.UTF8.GetString(buffer)}");
                 await webSocket.SendAsync(new ArraySegment<byte>(serverMsg, 0, serverMsg.Length), result.MessageType, result.EndOfMessage, CancellationToken.None);
                 _logger.Log(LogLevel.Information, "Message sent to Client");
+
+                db.StringSet("test", System.Text.Encoding.Default.GetString(buffer));
+                
+                string value = await db.StringGetAsync("test");
+                Console.WriteLine(value);
 
                 buffer = new byte[1024 * 4];
                 result = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
